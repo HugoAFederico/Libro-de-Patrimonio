@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>Patrimonio AR</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/aframe@1.4.2/dist/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.2/dist/mindar-image-aframe.prod.js"></script>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;600&family=Raleway:wght@300;400;500&display=swap');
+
+    :root {
+      --dorado: #b8955a;
+      --dorado-claro: #d4b07a;
+      --oscuro: #1c1410;
+      --crema: #f0e6d0;
+      --fondo-panel: rgba(20,14,8,0.88);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: var(--oscuro);
+      font-family: 'Raleway', sans-serif;
+      color: var(--crema);
+      overflow: hidden;
+      height: 100vh;
+      width: 100vw;
+    }
+
+    /* ── PANTALLA DE INICIO ── */
+    #pantalla-inicio {
+      position: fixed;
+      inset: 0;
+      z-index: 999;
+      background: var(--oscuro);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 28px;
+      text-align: center;
+      transition: opacity 0.6s ease;
+    }
+
+    #pantalla-inicio.oculto {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .inicio-icono { font-size: 54px; margin-bottom: 16px; }
+
+    .linea-oro {
+      width: 50px; height: 1px;
+      background: linear-gradient(to right, transparent, var(--dorado), transparent);
+      margin: 0 auto 20px;
+    }
+
+    #pantalla-inicio h1 {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 32px;
+      font-weight: 600;
+      color: var(--dorado-claro);
+      line-height: 1.2;
+      margin-bottom: 14px;
+    }
+
+    #pantalla-inicio p {
+      font-size: 15px;
+      font-weight: 300;
+      color: rgba(240,230,208,0.65);
+      line-height: 1.7;
+      max-width: 280px;
+      margin: 0 auto 36px;
+    }
+
+    .btn-iniciar {
+      background: var(--dorado);
+      color: var(--oscuro);
+      border: none;
+      padding: 15px 40px;
+      font-family: 'Raleway', sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      cursor: pointer;
+      border-radius: 1px;
+    }
+
+    .aviso {
+      font-size: 11px;
+      color: rgba(240,230,208,0.3);
+      margin-top: 14px;
+      letter-spacing: 0.04em;
+    }
+
+    /* ── ESCENA AR ── */
+    #contenedor-ar {
+      position: fixed;
+      inset: 0;
+      z-index: 1;
+    }
+
+    a-scene {
+      width: 100vw !important;
+      height: 100vh !important;
+    }
+
+    /* ── HUD ── */
+    #hud-top {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      padding: 14px 18px;
+      background: linear-gradient(to bottom, rgba(20,14,8,0.75), transparent);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.4s;
+    }
+
+    #hud-top.visible { opacity: 1; pointer-events: all; }
+
+    .hud-titulo {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--dorado-claro);
+    }
+
+    .hud-estado {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 11px;
+      letter-spacing: 0.06em;
+      color: rgba(240,230,208,0.5);
+    }
+
+    .hud-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: #555;
+      transition: background 0.4s, box-shadow 0.4s;
+    }
+
+    .hud-dot.detectando {
+      background: #4caf50;
+      box-shadow: 0 0 6px #4caf50;
+      animation: pulso 2s infinite;
+    }
+
+    @keyframes pulso {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    /* ── BUSCANDO ── */
+    #buscando {
+      position: fixed;
+      bottom: 130px; left: 0; right: 0;
+      z-index: 100;
+      text-align: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.4s;
+    }
+
+    #buscando.visible { opacity: 1; }
+
+    .buscando-caja {
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      background: var(--fondo-panel);
+      border: 1px solid rgba(184,149,90,0.3);
+      padding: 16px 26px;
+      border-radius: 2px;
+      backdrop-filter: blur(10px);
+    }
+
+    .buscando-icono {
+      font-size: 26px;
+      animation: flotar 1.8s ease-in-out infinite;
+    }
+
+    @keyframes flotar {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-5px); }
+    }
+
+    .buscando-texto {
+      font-size: 13px;
+      font-weight: 300;
+      color: rgba(240,230,208,0.85);
+      letter-spacing: 0.05em;
+    }
+
+    /* ── PANEL INFO ── */
+    #panel-info {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      z-index: 100;
+      padding: 0 14px 20px;
+      transform: translateY(110%);
+      transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    #panel-info.visible { transform: translateY(0); }
+
+    .panel-interior {
+      background: var(--fondo-panel);
+      border: 1px solid rgba(184,149,90,0.3);
+      border-radius: 2px;
+      padding: 18px 20px;
+      backdrop-filter: blur(14px);
+    }
+
+    .panel-linea { width: 36px; height: 2px; background: var(--dorado); margin-bottom: 12px; }
+    .panel-nombre { font-family: 'Cormorant Garamond', serif; font-size: 22px; font-weight: 600; color: var(--dorado-claro); margin-bottom: 4px; }
+    .panel-periodo { font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--dorado); margin-bottom: 8px; }
+    .panel-desc { font-size: 13px; font-weight: 300; color: rgba(240,230,208,0.7); line-height: 1.6; }
+
+    /* ── BOTÓN CERRAR ── */
+    #btn-cerrar {
+      position: fixed;
+      top: 14px; right: 14px;
+      z-index: 200;
+      width: 38px; height: 38px;
+      background: var(--fondo-panel);
+      border: 1px solid rgba(184,149,90,0.35);
+      color: var(--crema);
+      font-size: 18px;
+      cursor: pointer;
+      border-radius: 1px;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(8px);
+    }
+
+    #btn-cerrar.visible { display: flex; }
+  </style>
+</head>
+<body>
+
+  <!-- ESCENA AR -->
+  <div id="contenedor-ar">
+    <a-scene
+      mindar-image="imageTargetSrc: targets.mind; autoStart: false; uiLoading: no; uiScanning: no;"
+      embedded
+      color-space="sRGB"
+      renderer="colorManagement: true; physicallyCorrectLights: true"
+      vr-mode-ui="enabled: false"
+      device-orientation-permission-ui="enabled: false"
+      id="escena"
+    >
+      <a-assets>
+        <a-asset-item id="modelo-3d" src="colada1.glb"></a-asset-item>
+      </a-assets>
+
+      <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+
+      <!--
+        ════════════════════════════════════════════════════════
+        AJUSTES DEL MODELO — modificá estos 3 valores si algo
+        no se ve bien:
+
+        rotation="-90 0 0"
+          → Corrige eje Y→Z de SketchUp. Si aparece bien parado,
+            dejalo. Si aparece al revés probá "90 0 0".
+
+        scale="0.5 0.5 0.5"
+          → Tamaño del modelo sobre la imagen.
+            Muy chico: subí a 1 1 1 o 2 2 2
+            Muy grande: bajá a 0.2 0.2 0.2
+
+        position="0 0 0.05"
+          → Lo levanta apenas 5 cm sobre la imagen para que
+            no quede enterrado en el papel. Si flota demasiado
+            alto, bajalo a "0 0 0.01"
+        ════════════════════════════════════════════════════════
+      -->
+      <a-entity mindar-image-target="targetIndex: 0" id="ancla-ar">
+        <a-gltf-model
+          id="modelo-ar"
+          src="#modelo-3d"
+          position="0 0 0"
+          scale="2 2 2"
+          rotation="0 0 0"
+        ></a-gltf-model>
+      </a-entity>
+
+    </a-scene>
+  </div>
+
+  <!-- PANTALLA DE INICIO -->
+  <div id="pantalla-inicio">
+    <div class="inicio-icono">🏛️</div>
+    <div class="linea-oro"></div>
+    <h1>Patrimonio<br>en Realidad Aumentada</h1>
+    <p>Apuntá tu cámara a la imagen impresa en la revista para ver el objeto en 3D</p>
+    <button class="btn-iniciar" onclick="iniciarAR()">Activar cámara</button>
+    <div class="aviso">Se solicitará permiso para usar la cámara</div>
+  </div>
+
+  <!-- HUD -->
+  <div id="hud-top">
+    <div class="hud-titulo">Patrimonio AR</div>
+    <div class="hud-estado">
+      <span id="hud-texto">Buscando imagen</span>
+      <div class="hud-dot" id="hud-dot"></div>
+    </div>
+  </div>
+
+  <!-- Buscando imagen -->
+  <div id="buscando">
+    <div class="buscando-caja">
+      <div class="buscando-icono">🔍</div>
+      <div class="buscando-texto">Apuntá a la imagen de la revista</div>
+    </div>
+  </div>
+
+  <!-- Panel info del objeto -->
+  <div id="panel-info">
+    <div class="panel-interior">
+      <div class="panel-linea"></div>
+      <div class="panel-nombre">Monumento Patrimonial</div>
+      <div class="panel-periodo">Patrimonio Cultural</div>
+      <div class="panel-desc">Objeto de valor patrimonial y cultural. Exploralo en 3D acercando y alejando el celular.</div>
+    </div>
+  </div>
+
+  <!-- Botón cerrar -->
+  <button id="btn-cerrar" onclick="cerrarAR()">✕</button>
+
+  <script>
+    let arActivo = false;
+
+    function iniciarAR() {
+      document.getElementById('pantalla-inicio').classList.add('oculto');
+      document.getElementById('hud-top').classList.add('visible');
+      document.getElementById('buscando').classList.add('visible');
+      document.getElementById('btn-cerrar').classList.add('visible');
+
+      const escena = document.getElementById('escena');
+
+      function arrancar() {
+        const sistema = escena.systems['mindar-image-system'];
+        if (sistema) {
+          sistema.start();
+          configurarEventos();
+        } else {
+          setTimeout(arrancar, 200);
+        }
+      }
+
+      if (escena.hasLoaded) {
+        arrancar();
+      } else {
+        escena.addEventListener('loaded', arrancar);
+      }
+    }
+
+    function configurarEventos() {
+      if (arActivo) return;
+      arActivo = true;
+
+      const ancla   = document.getElementById('ancla-ar');
+      const dot     = document.getElementById('hud-dot');
+      const textoHud = document.getElementById('hud-texto');
+
+      ancla.addEventListener('targetFound', () => {
+        document.getElementById('buscando').classList.remove('visible');
+        document.getElementById('panel-info').classList.add('visible');
+        dot.classList.add('detectando');
+        textoHud.textContent = 'Imagen detectada';
+      });
+
+      ancla.addEventListener('targetLost', () => {
+        document.getElementById('buscando').classList.add('visible');
+        document.getElementById('panel-info').classList.remove('visible');
+        dot.classList.remove('detectando');
+        textoHud.textContent = 'Buscando imagen';
+      });
+    }
+
+    function cerrarAR() {
+      const escena = document.getElementById('escena');
+      const sistema = escena.systems['mindar-image-system'];
+      if (sistema) sistema.stop();
+
+      document.getElementById('hud-top').classList.remove('visible');
+      document.getElementById('buscando').classList.remove('visible');
+      document.getElementById('panel-info').classList.remove('visible');
+      document.getElementById('btn-cerrar').classList.remove('visible');
+      document.getElementById('pantalla-inicio').classList.remove('oculto');
+      arActivo = false;
+    }
+  </script>
+
+</body>
+</html>
